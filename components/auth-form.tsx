@@ -1,89 +1,87 @@
 'use client'
 
-import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-
-type AuthMode = 'signin' | 'signup'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 
 export function AuthForm() {
-  const [mode, setMode] = useState<AuthMode>('signin')
+  const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const router = useRouter()
+
+  const supabase = createClient()
 
   const handleGoogleSignIn = async () => {
-    try {
-      setLoading(true)
-      setError(null)
+    setIsLoading(true)
+    setError(null)
 
-      const { error } = await supabase.auth.signInWithOAuth({
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+            `${window.location.origin}/auth/callback`,
         },
       })
 
       if (error) throw error
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setLoading(false)
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Google sign-in failed')
+      setIsLoading(false)
     }
   }
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    try {
-      setLoading(true)
-      setError(null)
-      setMessage(null)
+    setIsLoading(true)
+    setError(null)
 
+    try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
-
-      setMessage('Signed in successfully!')
-      setEmail('')
-      setPassword('')
-      // Redirect or update UI here
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign in failed')
+      router.push('/protected')
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Sign in failed')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsLoading(true)
+    setError(null)
+
     try {
-      setLoading(true)
-      setError(null)
-      setMessage(null)
-
-      // First check if user exists with this email
-      const { data: existingUser } = await supabase.auth.signInWithPassword({
-        email,
-        password: 'dummy', // This will fail if user doesn't exist
-      }).catch(() => ({ data: null }))
-
-      if (existingUser) {
-        setError('This email is already registered. Please sign in instead.')
-        return
-      }
-
-      // Sign up new user
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      // Sign up with email
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
+            `${window.location.origin}/auth/callback`,
           data: {
             first_name: firstName,
             last_name: lastName,
@@ -91,133 +89,217 @@ export function AuthForm() {
         },
       })
 
-      if (signUpError) throw signUpError
+      if (error) throw error
 
-      if (data?.user?.id) {
-        // Insert user profile in public.users table
-        const { error: insertError } = await supabase.from('users').insert({
-          id: data.user.id,
-          email,
-          first_name: firstName,
-          last_name: lastName,
-          created_at: new Date(),
-        })
+      setSuccessMessage(
+        'Sign up successful! Please check your email to confirm your account.'
+      )
+      setEmail('')
+      setPassword('')
+      setFirstName('')
+      setLastName('')
 
-        if (insertError) throw insertError
-
-        setMessage('Sign up successful! Please check your email to confirm.')
-        setEmail('')
-        setPassword('')
-        setFirstName('')
-        setLastName('')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign up failed')
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage(null)
+        setIsSignUp(false)
+      }, 3000)
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Sign up failed')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
   return (
-    <div className="mx-auto w-full max-w-md rounded-lg border border-border p-6">
-      <h1 className="mb-6 text-center text-2xl font-bold">
-        {mode === 'signin' ? 'Sign In' : 'Sign Up'}
-      </h1>
+    <div className="w-full max-w-sm">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-2xl">
+            {isSignUp ? 'Create Account' : 'Sign In'}
+          </CardTitle>
+          <CardDescription>
+            {isSignUp
+              ? 'Create a new account to get started'
+              : 'Sign in to your account'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-6">
+            {/* Google Sign In Button */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+            >
+              <svg
+                className="mr-2 h-4 w-4"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  fill="currentColor"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              Continue with Google
+            </Button>
 
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
 
-      {message && (
-        <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
-          {message}
-        </div>
-      )}
+            {/* Error Message */}
+            {error && <p className="text-sm text-red-500">{error}</p>}
 
-      {/* Google Sign In */}
-      <Button
-        onClick={handleGoogleSignIn}
-        disabled={loading}
-        variant="outline"
-        className="mb-4 w-full"
-      >
-        {loading ? 'Loading...' : 'Continue with Google'}
-      </Button>
+            {/* Success Message */}
+            {successMessage && (
+              <p className="text-sm text-green-600">{successMessage}</p>
+            )}
 
-      <div className="relative mb-4">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Or</span>
-        </div>
-      </div>
+            {/* Sign Up Form */}
+            {isSignUp && (
+              <form onSubmit={handleEmailSignUp}>
+                <div className="flex flex-col gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="John"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="m@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Signing up...' : 'Sign Up'}
+                  </Button>
+                </div>
+              </form>
+            )}
 
-      {/* Email/Password Form */}
-      <form
-        onSubmit={mode === 'signin' ? handleEmailSignIn : handleSignUp}
-        className="space-y-4"
-      >
-        {mode === 'signup' && (
-          <>
-            <input
-              type="text"
-              placeholder="First Name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            />
-            <input
-              type="text"
-              placeholder="Last Name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-            />
-          </>
-        )}
+            {/* Sign In Form */}
+            {!isSignUp && (
+              <form onSubmit={handleEmailSignIn}>
+                <div className="flex flex-col gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="login-email">Email</Label>
+                    <Input
+                      id="login-email"
+                      type="email"
+                      placeholder="m@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="login-password">Password</Label>
+                    <Input
+                      id="login-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? 'Signing in...' : 'Sign In'}
+                  </Button>
+                </div>
+              </form>
+            )}
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-        />
-
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-        />
-
-        <Button disabled={loading} className="w-full">
-          {loading ? 'Loading...' : mode === 'signin' ? 'Sign In' : 'Sign Up'}
-        </Button>
-      </form>
-
-      {/* Toggle between modes */}
-      <p className="mt-4 text-center text-sm text-muted-foreground">
-        {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
-        <button
-          onClick={() => {
-            setMode(mode === 'signin' ? 'signup' : 'signin')
-            setError(null)
-            setMessage(null)
-          }}
-          className="text-primary hover:underline"
-        >
-          {mode === 'signin' ? 'Sign Up' : 'Sign In'}
-        </button>
-      </p>
+            {/* Toggle Sign Up/Sign In */}
+            <div className="text-center text-sm">
+              {isSignUp ? (
+                <>
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => {
+                      setIsSignUp(false)
+                      setError(null)
+                      setSuccessMessage(null)
+                    }}
+                    className="underline underline-offset-4 hover:text-primary"
+                  >
+                    Sign in
+                  </button>
+                </>
+              ) : (
+                <>
+                  Don&apos;t have an account?{' '}
+                  <button
+                    onClick={() => {
+                      setIsSignUp(true)
+                      setError(null)
+                    }}
+                    className="underline underline-offset-4 hover:text-primary"
+                  >
+                    Sign up
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
