@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Menu, X, ShoppingCart, Bell, Locate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 import ProfileDropdown from "@/components/custom/ProfileDropDown";
 import ServiceMenu from "@/components/custom/ServiceMenu";   // ← Import here
 import logo from "@/public/logo/logo.png";
@@ -14,6 +15,7 @@ import AuthSheet from "@/components/custom/auth/AuthSheet";
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -124,8 +126,7 @@ const Navbar = () => {
                 <Bell className="h-5 w-5" />
               </Button>
 
-              <ProfileDropdown />
-              <AuthSheet />
+              {isAuthenticated ? <ProfileDropdown /> : <AuthSheet />}
             </div>
 
             {/* ==================== MOBILE RIGHT SIDE ==================== */}
@@ -139,7 +140,7 @@ const Navbar = () => {
                 <Bell className="h-6 w-6" />
               </Button>
 
-              <ProfileDropdown />
+              {isAuthenticated && <ProfileDropdown />}
 
               <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -218,14 +219,16 @@ const Navbar = () => {
                 </Button>
               </div>
 
-              <div className="flex gap-3">
-                <Button variant="outline" className="flex-1 py-6 rounded-2xl" onClick={() => setIsOpen(false)}>
-                  Sign In
-                </Button>
-                <Button className="flex-1 py-6 rounded-2xl bg-blue-950 hover:bg-blue-900" onClick={() => setIsOpen(false)}>
-                  Sign Up
-                </Button>
-              </div>
+              {!isAuthenticated && (
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1 py-6 rounded-2xl" onClick={() => setIsOpen(false)}>
+                    Sign In
+                  </Button>
+                  <Button className="flex-1 py-6 rounded-2xl bg-blue-950 hover:bg-blue-900" onClick={() => setIsOpen(false)}>
+                    Sign Up
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

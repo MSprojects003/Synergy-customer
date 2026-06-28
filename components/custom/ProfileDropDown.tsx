@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { User, Package, Calendar, Settings, LogOut, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
 import {
   Sheet,
   SheetContent,
@@ -22,6 +24,14 @@ import {
 
 const ProfileDropDown = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const { user, isAuthenticated, signOut } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut();
+    setIsSheetOpen(false);
+    router.push("/");
+  };
 
   const menuItems = [
     { name: "My Profile", href: "/profile", icon: User },
@@ -29,6 +39,11 @@ const ProfileDropDown = () => {
     { name: "Work Reservations", href: "/reservations", icon: Calendar },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
+
+  // Don't render if not authenticated
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   return (
     <>
@@ -47,8 +62,12 @@ const ProfileDropDown = () => {
 
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel className="flex flex-col">
-              <span className="font-semibold">John Doe</span>
-              <span className="text-sm text-gray-500">john@example.com</span>
+              <span className="font-semibold">
+                {user.first_name && user.last_name
+                  ? `${user.first_name} ${user.last_name}`
+                  : user.email?.split("@")[0]}
+              </span>
+              <span className="text-sm text-gray-500">{user.email}</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
 
@@ -62,7 +81,10 @@ const ProfileDropDown = () => {
             ))}
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600 focus:text-red-600 cursor-pointer py-2.5">
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="text-red-600 focus:text-red-600 cursor-pointer py-2.5"
+            >
               <LogOut className="h-4 w-4 mr-3" />
               Logout
             </DropdownMenuItem>
@@ -103,8 +125,12 @@ const ProfileDropDown = () => {
                     <User className="h-8 w-8 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-semibold text-lg">John Doe</div>
-                    <div className="text-sm text-gray-500">john@example.com</div>
+                    <div className="font-semibold text-lg">
+                      {user.first_name && user.last_name
+                        ? `${user.first_name} ${user.last_name}`
+                        : user.email?.split("@")[0]}
+                    </div>
+                    <div className="text-sm text-gray-500">{user.email}</div>
                   </div>
                 </div>
               </div>
@@ -130,7 +156,7 @@ const ProfileDropDown = () => {
               {/* Logout */}
               <div className="p-6 border-t mt-auto">
                 <button
-                  onClick={() => setIsSheetOpen(false)}
+                  onClick={handleLogout}
                   className="flex w-full items-center gap-4 px-5 py-[18px] text-red-600 hover:bg-red-50 rounded-2xl transition-all text-[15px] font-medium active:scale-[0.985]"
                 >
                   <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
