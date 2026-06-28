@@ -1,5 +1,4 @@
-// lib/api/user.ts
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export interface User {
   id: string;
@@ -17,6 +16,7 @@ export interface User {
 
 export const userApi = {
   getCurrentUser: async (): Promise<User | null> => {
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
@@ -38,6 +38,7 @@ export const userApi = {
     phone?: string;
     profile_image?: string;
   }) => {
+    const supabase = createClient();
     const { error } = await supabase.from("users").insert({
       id: userData.id,
       first_name: userData.first_name || null,

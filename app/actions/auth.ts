@@ -1,10 +1,10 @@
 "use server";
 
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function signupCustomer(formData: FormData) {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const first_name = formData.get("first_name") as string;
   const last_name = formData.get("last_name") as string;

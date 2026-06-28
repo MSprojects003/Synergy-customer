@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Wrench } from "lucide-react";
 import Signin from "./Signin";
 
 export default function AuthForm() {
+  const [isSignup, setIsSignup] = useState(false);
+
   return (
     <div className="min-h-screen w-full flex bg-white">
       {/* Left panel — Brand */}
@@ -62,7 +65,11 @@ export default function AuthForm() {
             </span>
           </div>
 
-          <Signin />
+          <Signin
+            isSignup={isSignup}
+            onSwitchToSignup={() => setIsSignup(true)}
+            onSwitchToSignin={() => setIsSignup(false)}
+          />
         </div>
       </div>
     </div>

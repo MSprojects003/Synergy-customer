@@ -1,5 +1,4 @@
-// lib/api/customer.ts
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export interface Customer {
   id: string;
@@ -22,6 +21,7 @@ export const customerApi = {
     delivery_address?: any;
     phone?: string;
   }) => {
+    const supabase = createClient();
     const { error } = await supabase.from("customers").insert({
       user_id: data.user_id,
       address: data.address || null,

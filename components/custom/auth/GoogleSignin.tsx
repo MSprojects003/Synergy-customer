@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { GoogleIcon } from "./Googleicon";
-import { supabase } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client";
 
 export default function GoogleSignin() {
   const [loading, setLoading] = useState(false);
@@ -12,6 +12,7 @@ export default function GoogleSignin() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      const supabase = createClient();
       const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
       console.log("🔍 redirectTo being sent to Supabase:", redirectTo);
 
