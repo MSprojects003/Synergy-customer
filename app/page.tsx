@@ -1,4 +1,8 @@
+"use client"
 import { Button } from "@/components/ui/button"
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { toast} from "sonner";
 
 export default function HomePage() {
   const searchParams = useSearchParams();
@@ -17,7 +21,7 @@ export default function HomePage() {
       // Log the raw code to the browser console so you can see it even
       // without reading server logs.
       console.error("Auth callback error code:", error);
-      const message = ERROR_MESSAGES[error] || `Authentication failed (${error}).`;
+      const message = error || `Authentication failed (${error}).`;
       toast.error("❌ " + message);
     }
 
