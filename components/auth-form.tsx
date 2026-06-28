@@ -32,17 +32,23 @@ export function AuthForm() {
     setError(null)
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const redirectUrl = `${window.location.origin}/auth/callback`
+      console.log('[v0] Google OAuth redirect URL:', redirectUrl)
+      
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ??
-            `${window.location.origin}/auth/callback`,
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: false,
         },
       })
 
-      if (error) throw error
+      if (error) {
+        console.log('[v0] Google OAuth error:', error)
+        throw error
+      }
     } catch (error: unknown) {
+      console.log('[v0] Google sign-in error:', error)
       setError(error instanceof Error ? error.message : 'Google sign-in failed')
       setIsLoading(false)
     }
