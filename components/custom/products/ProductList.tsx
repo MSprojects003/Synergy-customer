@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import ProductCard from "./ProductCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -11,13 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const products = [
-  { id: 1, name: "Cordless Drill", price: 89.99, category: "Power Tools", rating: 4.8, image: "/placeholder-products/drill-1.jpg", imageBack: "/placeholder-products/drill-2.jpg" },
-  { id: 2, name: "Hammer Set", price: 29.99, category: "Hand Tools", rating: 4.5, image: "/placeholder-products/hammer-1.jpg", imageBack: "/placeholder-products/hammer-2.jpg" },
-  { id: 3, name: "LED Work Light", price: 45.50, category: "Electrical", rating: 4.9, image: "/placeholder-products/light-1.jpg", imageBack: "/placeholder-products/light-2.jpg" },
-  { id: 4, name: "Pipe Wrench", price: 18.99, category: "Plumbing", rating: 4.2, image: "/placeholder-products/wrench-1.jpg", imageBack: "/placeholder-products/wrench-2.jpg" },
-];
+import { productsApi,  Product  } from "@/lib/api/products";
+import { Loader2 } from "lucide-react";
 
 interface ProductListProps {
   selectedCategory: string;
@@ -28,6 +24,13 @@ export default function ProductList({ selectedCategory, searchQuery }: ProductLi
   const [sortOption, setSortOption] = useState<"best-match" | "low-high" | "high-low">("best-match");
   const [localSearch, setLocalSearch] = useState("");
 
+  // Fetch real data from Supabase
+  const { data: products = [], isLoading, error } = useQuery({
+    queryKey: ["products"],
+    queryFn: productsApi.getAllProducts,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
@@ -36,12 +39,12 @@ export default function ProductList({ selectedCategory, searchQuery }: ProductLi
       result = result.filter((p) => p.category === selectedCategory);
     }
 
-    // Filter by search (global + local)
+    // Filter by search
     const query = (searchQuery + " " + localSearch).trim().toLowerCase();
     if (query) {
       result = result.filter((p) =>
         p.name.toLowerCase().includes(query) ||
-        p.category.toLowerCase().includes(query)
+        (p.category && p.category.toLowerCase().includes(query))
       );
     }
 
@@ -51,10 +54,25 @@ export default function ProductList({ selectedCategory, searchQuery }: ProductLi
     } else if (sortOption === "high-low") {
       result.sort((a, b) => b.price - a.price);
     }
-    // "best-match" keeps original order (you can improve later with relevance)
 
     return result;
-  }, [selectedCategory, searchQuery, localSearch, sortOption]);
+  }, [products, selectedCategory, searchQuery, localSearch, sortOption]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20 text-red-500">
+        Failed to load products. Please try again later.
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -65,7 +83,6 @@ export default function ProductList({ selectedCategory, searchQuery }: ProductLi
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          {/* Local Search */}
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
@@ -76,7 +93,6 @@ export default function ProductList({ selectedCategory, searchQuery }: ProductLi
             />
           </div>
 
-          {/* Sort */}
           <Select value={sortOption} onValueChange={(value: any) => setSortOption(value)}>
             <SelectTrigger className="w-full sm:w-44">
               <SelectValue placeholder="Sort by" />
@@ -92,7 +108,7 @@ export default function ProductList({ selectedCategory, searchQuery }: ProductLi
 
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredProducts.map((product) => (
+        {filteredProducts.map((product: Product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

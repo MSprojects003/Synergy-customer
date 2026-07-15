@@ -21,9 +21,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import ProfileSheet from "./profile/ProfileSheet";
 
 const ProfileDropDown = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const { user, isAuthenticated, signOut } = useAuth();
   const router = useRouter();
 
@@ -34,15 +36,39 @@ const ProfileDropDown = () => {
   };
 
   const menuItems = [
-    { name: "My Profile", href: "/profile", icon: User },
     { name: "My Orders", href: "/orders", icon: Package },
     { name: "Work Reservations", href: "/reservations", icon: Calendar },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 
-  // Don't render if not authenticated
-  if (!isAuthenticated || !user) {
-    return null;
+  if (!isAuthenticated || !user) return null;
+
+  const displayName =
+    user.first_name && user.last_name
+      ? `${user.first_name} ${user.last_name}`
+      : user.email?.split("@")[0];
+
+  const avatarLetter =
+    user.first_name?.[0]?.toUpperCase() ??
+    user.email?.[0]?.toUpperCase() ??
+    "?";
+
+  const profileImage = user.profile_image ?? null;
+
+  function AvatarTrigger({ size = "sm" }: { size?: "sm" | "lg" }) {
+    const dim = size === "lg" ? "w-14 h-14 text-xl rounded-2xl" : "w-9 h-9 text-sm rounded-full";
+    return profileImage ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={profileImage}
+        alt={displayName}
+        className={`${dim} object-cover bg-gray-100`}
+      />
+    ) : (
+      <div className={`${dim} bg-blue-100 text-blue-700 font-semibold flex items-center justify-center`}>
+        {avatarLetter}
+      </div>
+    );
   }
 
   return (
@@ -54,22 +80,27 @@ const ProfileDropDown = () => {
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full hover:bg-gray-100"
+              className="rounded-full p-0 overflow-hidden hover:ring-2 hover:ring-blue-200 transition-all w-9 h-9"
             >
-              <User className="h-6 w-6" />
+              <AvatarTrigger size="sm" />
             </Button>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-64">
             <DropdownMenuLabel className="flex flex-col">
-              <span className="font-semibold">
-                {user.first_name && user.last_name
-                  ? `${user.first_name} ${user.last_name}`
-                  : user.email?.split("@")[0]}
-              </span>
+              <span className="font-semibold">{displayName}</span>
               <span className="text-sm text-gray-500">{user.email}</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+
+            {/* My Profile opens ProfileSheet */}
+            <DropdownMenuItem
+              className="flex items-center gap-3 cursor-pointer py-2.5"
+              onClick={() => setProfileSheetOpen(true)}
+            >
+              <User className="h-4 w-4" />
+              My Profile
+            </DropdownMenuItem>
 
             {menuItems.map((item) => (
               <DropdownMenuItem key={item.name} asChild>
@@ -81,7 +112,7 @@ const ProfileDropDown = () => {
             ))}
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={handleLogout}
               className="text-red-600 focus:text-red-600 cursor-pointer py-2.5"
             >
@@ -97,10 +128,10 @@ const ProfileDropDown = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="rounded-full hover:bg-gray-100"
+          className="rounded-full p-0 overflow-hidden hover:ring-2 hover:ring-blue-200 transition-all w-9 h-9"
           onClick={() => setIsSheetOpen(true)}
         >
-          <User className="h-6 w-6" />
+          <AvatarTrigger size="sm" />
         </Button>
 
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -108,9 +139,7 @@ const ProfileDropDown = () => {
             <div className="flex flex-col h-full">
               {/* Header */}
               <div className="border-b px-6 py-5 flex items-center justify-between bg-white sticky top-0 z-10">
-                <div>
-                  <SheetTitle className="text-xl font-semibold">My Account</SheetTitle>
-                 </div>
+                <SheetTitle className="text-xl font-semibold">My Account</SheetTitle>
                 <SheetClose asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
                     <X className="h-5 w-5" />
@@ -121,15 +150,9 @@ const ProfileDropDown = () => {
               {/* User Info */}
               <div className="px-6 py-6 border-b bg-gray-50">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center">
-                    <User className="h-8 w-8 text-blue-600" />
-                  </div>
+                  <AvatarTrigger size="lg" />
                   <div>
-                    <div className="font-semibold text-lg">
-                      {user.first_name && user.last_name
-                        ? `${user.first_name} ${user.last_name}`
-                        : user.email?.split("@")[0]}
-                    </div>
+                    <div className="font-semibold text-lg">{displayName}</div>
                     <div className="text-sm text-gray-500">{user.email}</div>
                   </div>
                 </div>
@@ -138,15 +161,24 @@ const ProfileDropDown = () => {
               {/* Menu Items */}
               <div className="flex-1 px-1 py-2 overflow-auto">
                 <div className="space-y-1">
+                  {/* My Profile opens ProfileSheet */}
+                  <button
+                    type="button"
+                    onClick={() => { setIsSheetOpen(false); setTimeout(() => setProfileSheetOpen(true), 200); }}
+                    className="flex w-full items-center gap-3 px-5 py-4 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-2xl mx-1 transition-all active:scale-[0.985]"
+                  >
+                    <User className="h-4 w-4 text-gray-600" />
+                    My Profile
+                  </button>
+
                   {menuItems.map((item) => (
                     <Link
                       key={item.name}
                       href={item.href}
                       onClick={() => setIsSheetOpen(false)}
-                      className="flex items-left gap-2 px-5 py-2 text-4 font-medium text-gray-700 hover:bg-gray-100 rounded-2xl mx-1 transition-all active:scale-[0.985]"
+                      className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-2xl mx-1 transition-all active:scale-[0.985]"
                     >
                       <item.icon className="h-4 w-4 text-gray-600" />
-                       
                       {item.name}
                     </Link>
                   ))}
@@ -169,6 +201,9 @@ const ProfileDropDown = () => {
           </SheetContent>
         </Sheet>
       </div>
+
+      {/* ==================== PROFILE SHEET ==================== */}
+      <ProfileSheet open={profileSheetOpen} onOpenChange={setProfileSheetOpen} />
     </>
   );
 };

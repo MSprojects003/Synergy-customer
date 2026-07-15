@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GoogleIcon } from "./Googleicon";
 import Signup from "./Signup";
+import GoogleSignin from "./GoogleSignin";
 
 interface SigninProps {
   isSignup: boolean;
@@ -31,14 +32,7 @@ export default function Signin({
       
 
       {/* Google Sign In */}
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full mt-0 h-11 gap-2.5 border-gray-200 hover:bg-gray-50 font-medium text-gray-700"
-      >
-        <GoogleIcon />
-        Continue with Google
-      </Button>
+       <GoogleSignin />
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center">
